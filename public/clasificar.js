@@ -1,7 +1,6 @@
 class ClasificadorFrutas {
   constructor() {
     this.modeloDisponible = false;
-    this.etiquetas = [];
     this.verificarModelo();
     this.configurarEventos();
   }
@@ -33,100 +32,37 @@ class ClasificadorFrutas {
 
   async verificarModelo() {
     try {
-      this.mostrarResultado(
-        'info-modelo',
-        'Verificando estado del modelo...',
-        'loading'
-      );
-
       const response = await fetch('/api/modelo/info');
       const data = await response.json();
 
       if (data.modeloEntrenado) {
         this.modeloDisponible = true;
-        this.etiquetas = data.etiquetas;
         this.mostrarResultado(
           'info-modelo',
-          `✅ Modelo entrenado con ${
-            data.totalClases
-          } clases: ${data.etiquetas.join(', ')}`,
+          `✅ Modelo listo. Clases disponibles: ${data.etiquetas.join(', ')}`,
           'success'
         );
+
+        // Habilitar botón de descarga
+        document.getElementById('btn-descargar').disabled = false;
       } else {
         this.modeloDisponible = false;
         this.mostrarResultado(
           'info-modelo',
-          '❌ No hay modelo entrenado. Entrena uno primero.',
+          '❌ No hay modelo disponible',
           'error'
         );
+
+        // Deshabilitar botón de descarga
+        document.getElementById('btn-descargar').disabled = true;
       }
 
-      const btnClasificar = document.getElementById('btn-clasificar');
-      btnClasificar.disabled = !this.modeloDisponible;
+      document.getElementById('btn-clasificar').disabled =
+        !this.modeloDisponible;
     } catch (error) {
       this.mostrarResultado(
         'info-modelo',
-        '❌ Error al verificar el modelo: ' + error.message,
-        'error'
-      );
-    }
-  }
-
-  async entrenarModelo() {
-    const archivos = document.getElementById('entrenar-archivos').files;
-
-    if (!archivos || archivos.length === 0) {
-      this.mostrarResultado(
-        'resultado-entrenamiento',
-        '❌ Selecciona al menos una imagen para entrenar',
-        'error'
-      );
-      return;
-    }
-
-    try {
-      this.mostrarResultado(
-        'resultado-entrenamiento',
-        `📤 Subiendo ${archivos.length} imágenes...`,
-        'loading'
-      );
-
-      const formData = new FormData();
-      for (let archivo of archivos) {
-        formData.append('imagenes', archivo);
-      }
-
-      this.mostrarResultado(
-        'resultado-entrenamiento',
-        '🧠 Entrenando modelo...',
-        'loading'
-      );
-
-      const response = await fetch('/api/modelo/entrenar', {
-        method: 'POST',
-        body: formData,
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Error en el servidor');
-      }
-
-      const resultado = await response.json();
-
-      this.mostrarResultado(
-        'resultado-entrenamiento',
-        `✅ ${resultado.mensaje}. Clases: ${resultado.etiquetas.join(
-          ', '
-        )}. Total: ${resultado.totalImagenes} imágenes`,
-        'success'
-      );
-
-      this.verificarModelo();
-    } catch (error) {
-      this.mostrarResultado(
-        'resultado-entrenamiento',
-        '❌ Error entrenando modelo: ' + error.message,
+        '❌ Error conectando con el servidor',
         'error'
       );
     }
@@ -138,7 +74,7 @@ class ClasificadorFrutas {
     if (!archivo) {
       this.mostrarResultado(
         'resultado-clasificacion',
-        '❌ Selecciona una imagen para clasificar',
+        '❌ Selecciona una imagen',
         'error'
       );
       return;
@@ -147,7 +83,7 @@ class ClasificadorFrutas {
     try {
       this.mostrarResultado(
         'resultado-clasificacion',
-        '🔍 Analizando imagen...',
+        '🔍 Analizando...',
         'loading'
       );
 
@@ -161,24 +97,86 @@ class ClasificadorFrutas {
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || 'Error en el servidor');
+        throw new Error(errorData.error);
       }
 
       const resultado = await response.json();
 
       this.mostrarResultado(
         'resultado-clasificacion',
-        `🎯 Detectado: ${resultado.clase} (${(
-          resultado.probabilidad * 100
-        ).toFixed(2)}% de confianza)`,
+        `🎯 ${resultado.clase} (${(resultado.probabilidad * 100).toFixed(
+          1
+        )}% de confianza)`,
         'success'
       );
     } catch (error) {
       this.mostrarResultado(
         'resultado-clasificacion',
-        '❌ Error clasificando imagen: ' + error.message,
+        '❌ Error: ' + error.message,
         'error'
       );
+    }
+  }
+
+  async descargarModelo() {
+    try {
+      // Mostrar estado de descarga
+      const btnDescargar = document.getElementById('btn-descargar');
+      const textoOriginal = btnDescargar.textContent;
+
+      btnDescargar.textContent = '⏳ Descargando...';
+      btnDescargar.disabled = true;
+
+      // Realizar descarga
+      const response = await fetch('/api/modelo/descargar');
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error);
+      }
+
+      // Obtener el blob del archivo ZIP
+      const blob = await response.blob();
+
+      // Crear URL temporal para la descarga
+      const url = window.URL.createObjectURL(blob);
+
+      // Crear elemento de descarga temporal
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = url;
+      a.download = 'modelo-frutas.zip';
+
+      // Agregar al DOM, hacer clic y remover
+      document.body.appendChild(a);
+      a.click();
+
+      // Limpiar recursos
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+
+      // Mostrar mensaje de éxito
+      this.mostrarResultado(
+        'info-modelo',
+        '✅ Modelo descargado exitosamente como modelo-frutas.zip',
+        'success'
+      );
+
+      // Restaurar botón
+      btnDescargar.textContent = textoOriginal;
+      btnDescargar.disabled = false;
+    } catch (error) {
+      // Mostrar error
+      this.mostrarResultado(
+        'info-modelo',
+        '❌ Error descargando modelo: ' + error.message,
+        'error'
+      );
+
+      // Restaurar botón
+      const btnDescargar = document.getElementById('btn-descargar');
+      btnDescargar.textContent = '📥 Descargar Modelo';
+      btnDescargar.disabled = false;
     }
   }
 }
@@ -189,10 +187,10 @@ function verificarModelo() {
   clasificador.verificarModelo();
 }
 
-function entrenarModelo() {
-  clasificador.entrenarModelo();
-}
-
 function clasificarImagen() {
   clasificador.clasificarImagen();
+}
+
+function descargarModelo() {
+  clasificador.descargarModelo();
 }

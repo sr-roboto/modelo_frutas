@@ -62,6 +62,14 @@
       cursor: not-allowed;
     }
 
+    .btn-download {
+      background-color: #2196F3;
+    }
+
+    .btn-download:hover {
+      background-color: #1976D2;
+    }
+
     #preview {
       max-width: 100%;
       max-height: 300px;
@@ -113,6 +121,8 @@
     <div class="section">
       <h2>ℹ️ Estado del Modelo</h2>
       <div class="resultado" id="info-modelo">Verificando modelo...</div>
+      <button onclick="verificarModelo()">Verificar Modelo</button>
+      <button onclick="descargarModelo()" id="btn-descargar" class="btn-download" disabled>📥 Descargar Modelo</button>
     </div>
 
     <!-- Clasificación -->
