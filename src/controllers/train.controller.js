@@ -1,4 +1,4 @@
-import * as tf from '@tensorflow/tfjs-node';
+import * as tf from '@tensorflow/tfjs';
 import sharp from 'sharp';
 import fs from 'fs/promises';
 import path from 'path';
