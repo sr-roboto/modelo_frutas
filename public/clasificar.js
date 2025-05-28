@@ -15,7 +15,7 @@ class ClasificadorFrutas {
 
   mostrarPreview(archivo) {
     if (!archivo) return;
-
+    console.log('Mostrando preview de:', archivo.name);
     const preview = document.getElementById('preview');
     const btnClasificar = document.getElementById('btn-clasificar');
 
